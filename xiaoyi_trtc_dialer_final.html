@@ -1,0 +1,92 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRTC 拨号器 - 小一定制版</title>
+  <style>
+    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background: #f3f3f3; }
+    h1 { margin-bottom: 20px; }
+    .input-group { margin: 10px 0; width: 100%; max-width: 400px; }
+    label { display: block; margin-bottom: 5px; }
+    input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    button { margin-top: 15px; padding: 10px 20px; border: none; border-radius: 4px; background-color: #007bff; color: white; cursor: pointer; }
+    #log { margin-top: 20px; width: 100%; max-width: 600px; height: 200px; border: 1px solid #ddd; overflow-y: auto; padding: 10px; background: #fff; }
+  </style>
+</head>
+<body>
+  <h1>小一专属 TRTC 拨号器</h1>
+
+  <div class="input-group">
+    <label for="sdkappid">SDKAppID</label>
+    <input id="sdkappid" value="1600096672">
+  </div>
+  <div class="input-group">
+    <label for="usersig">UserSig</label>
+    <input id="usersig" value="8c7b53c38ab10c025c2c5236130f9809aaafc4240d3463ee41d0288c6b183147">
+  </div>
+  <div class="input-group">
+    <label for="roomid">房间号</label>
+    <input id="roomid" value="1001">
+  </div>
+  <div class="input-group">
+    <label for="userid">用户ID</label>
+    <input id="userid" value="xiaoyi">
+  </div>
+  <div class="input-group">
+    <label for="phonenumber">电话号码（拨打 PSTN 时使用）</label>
+    <input id="phonenumber" value="13800138000">
+  </div>
+
+  <button id="joinBtn">加入房间</button>
+  <button id="callBtn">拨打电话</button>
+
+  <div id="log"></div>
+
+  <script src="https://liteav.sdk.qcloud.com/trtc/webrtc/trtc.min.js"></script>
+  <script>
+    const log = msg => {
+      const div = document.getElementById('log');
+      div.innerHTML += msg + '<br>';
+      div.scrollTop = div.scrollHeight;
+    };
+
+    let client;
+    document.getElementById('joinBtn').onclick = async () => {
+      const SDKAppID = parseInt(document.getElementById('sdkappid').value.trim());
+      const userSig = document.getElementById('usersig').value.trim();
+      const userID = document.getElementById('userid').value.trim();
+      const roomID = parseInt(document.getElementById('roomid').value.trim());
+      if (!SDKAppID || !userSig || !userID || !roomID) return alert('请填写所有必填项');
+
+      client = TRTC.createClient({ mode: 'rtc', sdkAppId: SDKAppID, userId: userID, userSig });
+      client.on('stream-added', event => {
+        const remoteStream = event.stream;
+        client.subscribe(remoteStream);
+      });
+      client.on('stream-subscribed', event => {
+        const remoteStream = event.stream;
+        remoteStream.play('remote-video');
+      });
+
+      await client.join({ roomId: roomID });
+      await client.publish();
+      log(`已加入房间 ${roomID}`);
+    };
+
+    document.getElementById('callBtn').onclick = async () => {
+      if (!client) return alert('请先加入房间');
+      const phone = document.getElementById('phonenumber').value.trim();
+      if (!phone) return alert('请填写电话号码');
+
+      try {
+        await client.call({ type: 'pstn', callee: phone, country: '86' });
+        log(`正在拨打 PSTN 电话: ${phone}`);
+      } catch (err) {
+        log('拨号失败: ' + err.message);
+      }
+    };
+  </script>
+</body>
+</html>
